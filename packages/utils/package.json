@@ -1,0 +1,18 @@
+{
+  "name": "@repo/utils",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./validators": "./src/validators.ts",
+    "./formatters": "./src/formatters.ts",
+    "./constants": "./src/constants.ts",
+    ".": "./src/index.ts"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "typescript": "5.9.2"
+  }
+}
