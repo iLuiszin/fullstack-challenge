@@ -1,3 +1,5 @@
+import { IsString, IsEnum, IsOptional, IsObject, MinLength, IsUUID } from 'class-validator';
+
 export enum NotificationType {
   TASK_ASSIGNED = 'TASK_ASSIGNED',
   TASK_UPDATED = 'TASK_UPDATED',
@@ -15,11 +17,24 @@ export interface Notification {
   createdAt: Date;
 }
 
-export interface CreateNotificationDto {
-  userId: string;
-  type: NotificationType;
-  title: string;
-  message: string;
+export class CreateNotificationDto {
+  @IsString()
+  @IsUUID()
+  userId!: string;
+
+  @IsEnum(NotificationType)
+  type!: NotificationType;
+
+  @IsString()
+  @MinLength(1)
+  title!: string;
+
+  @IsString()
+  @MinLength(1)
+  message!: string;
+
+  @IsOptional()
+  @IsObject()
   metadata?: Record<string, unknown>;
 }
 

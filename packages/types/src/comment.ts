@@ -1,3 +1,5 @@
+import { IsString, MinLength, IsUUID } from 'class-validator';
+
 export interface Comment {
   id: string;
   content: string;
@@ -7,9 +9,14 @@ export interface Comment {
   createdAt: Date;
 }
 
-export interface CreateCommentDto {
-  content: string;
-  taskId: string;
+export class CreateCommentDto {
+  @IsString()
+  @MinLength(1)
+  content!: string;
+
+  @IsString()
+  @IsUUID()
+  taskId!: string;
 }
 
 export interface PaginatedComments {
