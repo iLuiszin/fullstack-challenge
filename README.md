@@ -84,7 +84,7 @@ GET    /api/tasks/:id/comments?page=&size   # lista de comentários com paginaç
 ## 🏗️ Estrutura do Monorepo (sugerida)
 
 ```
-.
+
 ├── apps/
 │   ├── web/                     
 │   │   ├── src/                  # React + TanStack Router + shadcn + Tailwind
