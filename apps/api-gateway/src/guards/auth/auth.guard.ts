@@ -27,7 +27,7 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Token inválido!');
     }
 
-    req.user = { userId: result.userId, role: result.role };
+    req.user = { userId: result.userId };
 
     return true;
   }
