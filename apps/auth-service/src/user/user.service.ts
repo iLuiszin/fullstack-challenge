@@ -22,4 +22,12 @@ export class UserService {
   async findById(id: string): Promise<User | null> {
     return await this.userRepository.findOne({ where: { id } });
   }
+
+  async updateHashedRefreshToken(userId: string, hashedRefreshToken: string | null): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (user) {
+      user.hashedRefreshToken = hashedRefreshToken || undefined;
+      await this.userRepository.save(user);
+    }
+  }
 }

@@ -17,8 +17,13 @@ export class AuthController {
     return this.authService.login(credentials);
   }
 
-  @MessagePattern('validate-token')
-  async validateToken(@Payload() accessToken: string) {
-    return this.authService.validateToken(accessToken);
+  @MessagePattern('auth-refresh')
+  async refresh(@Payload() refreshToken: string) {
+    return this.authService.refresh(refreshToken);
+  }
+
+  @MessagePattern('auth-sign-out')
+  async signOut(@Payload() userId: string) {
+    return this.authService.signOut(userId);
   }
 }

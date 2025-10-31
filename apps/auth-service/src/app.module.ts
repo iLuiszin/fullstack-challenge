@@ -14,7 +14,7 @@ import { AuthModule } from './auth/auth.module';
     }),
     ClientsModule,
     TypeOrmModule.forRootAsync({
-      useFactory: databaseConfig,
+      useFactory: () => databaseConfig,
     }),
     AuthModule,
   ],

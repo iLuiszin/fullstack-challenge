@@ -1,31 +1,37 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
   LoginDto,
   JwtPayload,
   AuthResponse,
-  ValidateTokenResponse,
   RegisterDto,
   UserResponse,
+  ErrorCode,
 } from '@repo/types';
+import { throwRpcError } from '@repo/utils';
 import { UserService } from '../user/user.service';
 import { hash, verify } from 'argon2';
+import { AUTH_ERRORS } from './constants/auth.constants';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private jwtService: JwtService,
-    private userService: UserService,
+    private readonly jwtService: JwtService,
+    @Inject('REFRESH_JWT_SERVICE')
+    private readonly refreshJwtService: JwtService,
+    private readonly userService: UserService,
   ) {}
 
   async register(credentials: RegisterDto): Promise<AuthResponse> {
     const userExists = await this.userService.findByEmail(credentials.email);
 
-    if (userExists) throw new ConflictException('Usuário já cadastrado');
+    if (userExists) {
+      throwRpcError(
+        HttpStatus.CONFLICT,
+        AUTH_ERRORS.USER_ALREADY_EXISTS,
+        ErrorCode.USER_ALREADY_EXISTS,
+      );
+    }
 
     const hashedPassword = await hash(credentials.password);
 
@@ -34,84 +40,92 @@ export class AuthService {
       password: hashedPassword,
     });
 
-    const payload: JwtPayload = {
-      id: newUser.id,
-      email: newUser.email,
-    };
-
-    const accessToken = this.jwtService.sign(payload);
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-
-    const userResponse: UserResponse = {
-      id: newUser.id,
-      email: newUser.email,
-      username: newUser.username,
-      createdAt: newUser.createdAt,
-      updatedAt: newUser.updatedAt,
-    };
-
-    return {
-      accessToken,
-      refreshToken,
-      user: userResponse,
-    };
+    return this.generateAndStoreTokens(newUser);
   }
 
   async login(credentials: LoginDto): Promise<AuthResponse> {
     const user = await this.userService.findByEmail(credentials.email);
 
     if (!user) {
-      throw new UnauthorizedException('Credenciais inválidas');
+      throwRpcError(
+        HttpStatus.UNAUTHORIZED,
+        AUTH_ERRORS.INVALID_CREDENTIALS,
+        ErrorCode.INVALID_CREDENTIALS,
+      );
     }
 
     const passwordMatch = await verify(user.password, credentials.password);
 
     if (!passwordMatch) {
-      throw new UnauthorizedException('Credenciais inválidas');
+      throwRpcError(
+        HttpStatus.UNAUTHORIZED,
+        AUTH_ERRORS.INVALID_CREDENTIALS,
+        ErrorCode.INVALID_CREDENTIALS,
+      );
     }
 
+    return this.generateAndStoreTokens(user);
+  }
+
+  async refresh(refreshToken: string): Promise<AuthResponse> {
+    const payload = await this.refreshJwtService.verifyAsync(refreshToken);
+
+    const user = await this.userService.findById(payload.id);
+
+    if (!user || !user.hashedRefreshToken) {
+      throwRpcError(
+        HttpStatus.UNAUTHORIZED,
+        AUTH_ERRORS.INVALID_REFRESH_TOKEN,
+        ErrorCode.INVALID_REFRESH_TOKEN,
+      );
+    }
+
+    const isValidToken = await verify(user.hashedRefreshToken, refreshToken);
+
+    if (!isValidToken) {
+      throwRpcError(
+        HttpStatus.UNAUTHORIZED,
+        AUTH_ERRORS.INVALID_REFRESH_TOKEN,
+        ErrorCode.INVALID_REFRESH_TOKEN,
+      );
+    }
+
+    return this.generateAndStoreTokens(user);
+  }
+
+  async signOut(userId: string): Promise<void> {
+    await this.userService.updateHashedRefreshToken(userId, null);
+  }
+
+  private async generateAndStoreTokens(
+    user: UserResponse,
+  ): Promise<AuthResponse> {
     const payload: JwtPayload = {
       id: user.id,
       email: user.email,
     };
 
-    const accessToken = this.jwtService.sign(payload);
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload),
+      this.refreshJwtService.signAsync(payload),
+    ]);
 
-    const userResponse: UserResponse = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
+    const hashedRefreshToken = await hash(refreshToken);
+    await this.userService.updateHashedRefreshToken(
+      user.id,
+      hashedRefreshToken,
+    );
 
     return {
       accessToken,
       refreshToken,
-      user: userResponse,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
     };
-  }
-
-  async validadeLocalUser(email: string, password: string) {
-    const user = await this.userService.findByEmail(email);
-
-    if (!user) throw new UnauthorizedException('Usuário não encontrado!');
-
-    const isPasswordMatched = verify(user.password, password);
-
-    if (!isPasswordMatched)
-      throw new UnauthorizedException('Credenciais inválidas!');
-
-    return { id: user.id, email: user.email };
-  }
-
-  validateToken(accessToken: string): ValidateTokenResponse {
-    try {
-      const decoded = this.jwtService.verify<JwtPayload>(accessToken);
-      return { valid: true, userId: decoded.id };
-    } catch (_error) {
-      return { valid: false, userId: null };
-    }
   }
 }
