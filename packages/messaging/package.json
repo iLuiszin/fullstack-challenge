@@ -1,5 +1,5 @@
 {
-  "name": "@repo/types",
+  "name": "@repo/messaging",
   "version": "0.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,12 +9,11 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@nestjs/swagger": "^8.0.8",
-    "class-transformer": "^0.5.1",
-    "class-validator": "^0.14.2"
+    "@repo/types": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.18.12",
     "typescript": "5.9.2"
   }
 }

@@ -1,22 +1,42 @@
-import { IsString, MinLength, IsUUID } from 'class-validator';
+import {
+  IsString,
+  MinLength,
+  IsUUID,
+  MaxLength,
+  IsNotEmpty,
+  IsOptional,
+} from 'class-validator'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export interface Comment {
   id: string;
   content: string;
   taskId: string;
-  userId: string;
-  userName?: string;
+  authorId: string;
   createdAt: Date;
 }
 
 export class CreateCommentDto {
+  @ApiProperty({ description: 'Comment content', maxLength: 1000, example: 'This task looks good!' })
   @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
+  @MaxLength(1000)
   content!: string;
 
-  @IsString()
-  @IsUUID()
-  taskId!: string;
+  @ApiPropertyOptional({ description: 'Task ID (set by API gateway)' })
+  @IsOptional()
+  @IsUUID('4')
+  taskId?: string;
+
+  @ApiPropertyOptional({ description: 'Author ID (set by API gateway)' })
+  @IsOptional()
+  @IsUUID('4')
+  authorId?: string;
+
+  @ApiPropertyOptional({ description: 'Correlation ID for tracing (set by API gateway)' })
+  @IsOptional()
+  @IsUUID('4')
+  correlationId?: string;
 }
 
 export interface PaginatedComments {
