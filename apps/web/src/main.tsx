@@ -1,6 +1,42 @@
-import { createRoot } from 'react-dom/client'
-import './style.css'
+import { StrictMode } from 'react'
+import ReactDOM from 'react-dom/client'
+import { RouterProvider, createRouter } from '@tanstack/react-router'
 
-const App = () => <h1>Hello world</h1>
+import * as TanStackQueryProvider from './integrations/tanstack-query/root-provider.tsx'
 
-createRoot(document.getElementById('app')!).render(<App />)
+import { routeTree } from './routeTree.gen'
+
+import './styles.css'
+import reportWebVitals from './reportWebVitals.ts'
+
+const TanStackQueryProviderContext = TanStackQueryProvider.getContext()
+const router = createRouter({
+  routeTree,
+  context: {
+    ...TanStackQueryProviderContext,
+  },
+  defaultPreload: 'intent',
+  scrollRestoration: true,
+  defaultStructuralSharing: true,
+  defaultPreloadStaleTime: 0,
+})
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router
+  }
+}
+
+const rootElement = document.getElementById('app')
+if (rootElement && !rootElement.innerHTML) {
+  const root = ReactDOM.createRoot(rootElement)
+  root.render(
+    <StrictMode>
+      <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
+        <RouterProvider router={router} />
+      </TanStackQueryProvider.Provider>
+    </StrictMode>
+  )
+}
+
+reportWebVitals()
