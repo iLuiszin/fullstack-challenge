@@ -1,10 +1,6 @@
-import { Controller, Logger } from '@nestjs/common';
-import {
-  MessagePattern,
-  Payload,
-  Ctx,
-  RmqContext,
-} from '@nestjs/microservices';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { PinoLogger } from 'nestjs-pino';
 import { NotificationsService } from './notifications.service';
 import type {
   TaskCreatedEvent,
@@ -13,22 +9,21 @@ import type {
 } from '@repo/messaging';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationQueryOptions } from '@repo/types';
+import { FALLBACK_USER_NAME } from './constants/notifications.constants';
 
 @Controller()
 export class NotificationsController {
-  private readonly logger = new Logger(NotificationsController.name);
-
   constructor(
+    private readonly logger: PinoLogger,
     private readonly notificationsService: NotificationsService,
     private readonly notificationsGateway: NotificationsGateway,
-  ) {}
+  ) {
+    this.logger.setContext(NotificationsController.name);
+  }
 
   @MessagePattern('task.created')
-  async handleTaskCreated(
-    @Payload() data: TaskCreatedEvent,
-    @Ctx() context: RmqContext,
-  ) {
-    this.logger.log(`Received task.created event: ${data.id}`);
+  async handleTaskCreated(@Payload() data: TaskCreatedEvent) {
+    this.logger.info(`Received task.created event: ${data.id}`);
 
     try {
       const notifications =
@@ -37,7 +32,7 @@ export class NotificationsController {
           taskTitle: data.title,
           assigneeIds: data.assignedUserIds,
           creatorId: data.createdBy,
-          creatorName: data.creatorName || 'Usuário Desconhecido',
+          creatorName: data.creatorName ?? FALLBACK_USER_NAME,
         });
 
       for (const notification of notifications) {
@@ -56,11 +51,7 @@ export class NotificationsController {
         );
       }
 
-      const channel = context.getChannelRef();
-      const originalMsg = context.getMessage();
-      channel.ack(originalMsg);
-
-      this.logger.log(
+      this.logger.info(
         `Successfully processed task.created for ${notifications.length} users`,
       );
     } catch (error) {
@@ -68,19 +59,13 @@ export class NotificationsController {
         `Error processing task.created: ${error.message}`,
         error.stack,
       );
-
-      const channel = context.getChannelRef();
-      const originalMsg = context.getMessage();
-      channel.nack(originalMsg, false, true);
+      throw error;
     }
   }
 
   @MessagePattern('task.updated')
-  async handleTaskUpdated(
-    @Payload() data: TaskUpdatedEvent,
-    @Ctx() context: RmqContext,
-  ) {
-    this.logger.log(`Received task.updated event: ${data.id}`);
+  async handleTaskUpdated(@Payload() data: TaskUpdatedEvent) {
+    this.logger.info(`Received task.updated event: ${data.id}`);
 
     try {
       const notifications =
@@ -89,7 +74,7 @@ export class NotificationsController {
           taskTitle: data.title,
           assigneeIds: data.assignedUserIds,
           updaterId: data.updatedBy,
-          updaterName: data.updaterName || 'Usuário Desconhecido',
+          updaterName: data.updaterName ?? FALLBACK_USER_NAME,
           changes: data.changes,
         });
 
@@ -108,11 +93,7 @@ export class NotificationsController {
         );
       }
 
-      const channel = context.getChannelRef();
-      const originalMsg = context.getMessage();
-      channel.ack(originalMsg);
-
-      this.logger.log(
+      this.logger.info(
         `Successfully processed task.updated for ${notifications.length} users`,
       );
     } catch (error) {
@@ -120,19 +101,13 @@ export class NotificationsController {
         `Error processing task.updated: ${error.message}`,
         error.stack,
       );
-
-      const channel = context.getChannelRef();
-      const originalMsg = context.getMessage();
-      channel.nack(originalMsg, false, true);
+      throw error;
     }
   }
 
   @MessagePattern('comment.created')
-  async handleCommentCreated(
-    @Payload() data: CommentCreatedEvent,
-    @Ctx() context: RmqContext,
-  ) {
-    this.logger.log(`Received comment.created event for task: ${data.taskId}`);
+  async handleCommentCreated(@Payload() data: CommentCreatedEvent) {
+    this.logger.info(`Received comment.created event for task: ${data.taskId}`);
 
     try {
       const notifications =
@@ -143,7 +118,7 @@ export class NotificationsController {
           commentContent: data.content,
           assigneeIds: data.taskAssigneeIds,
           authorId: data.authorId,
-          authorName: data.authorName || 'Usuário Desconhecido',
+          authorName: data.authorName ?? FALLBACK_USER_NAME,
         });
 
       for (const notification of notifications) {
@@ -162,11 +137,7 @@ export class NotificationsController {
         );
       }
 
-      const channel = context.getChannelRef();
-      const originalMsg = context.getMessage();
-      channel.ack(originalMsg);
-
-      this.logger.log(
+      this.logger.info(
         `Successfully processed comment.created for ${notifications.length} users`,
       );
     } catch (error) {
@@ -174,10 +145,7 @@ export class NotificationsController {
         `Error processing comment.created: ${error.message}`,
         error.stack,
       );
-
-      const channel = context.getChannelRef();
-      const originalMsg = context.getMessage();
-      channel.nack(originalMsg, false, true);
+      throw error;
     }
   }
 
@@ -204,6 +172,25 @@ export class NotificationsController {
   @MessagePattern('notifications.markAllAsRead')
   async markAllNotificationsAsRead(@Payload() data: { userId: string }) {
     await this.notificationsService.markAllAsRead(data.userId);
+
+    return { success: true };
+  }
+
+  @MessagePattern('notifications.delete')
+  async deleteNotification(
+    @Payload() data: { notificationId: string; userId: string },
+  ) {
+    await this.notificationsService.deleteNotification(
+      data.notificationId,
+      data.userId,
+    );
+
+    return { success: true };
+  }
+
+  @MessagePattern('notifications.deleteAll')
+  async deleteAllNotifications(@Payload() data: { userId: string }) {
+    await this.notificationsService.deleteAllNotifications(data.userId);
 
     return { success: true };
   }

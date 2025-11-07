@@ -3,12 +3,13 @@ import { RpcHttpExceptionFilter } from '@repo/utils';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
 import { RABBITMQ_CONFIG } from './config/rabbitmq.config';
-import { ValidationPipe, Logger } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
+import { DEFAULT_RADIX, NOTIFICATIONS_SERVICE_CONFIG } from './constants/config.constants';
 
-const DEFAULT_PORT = 3005;
-const TCP_PORT = 3004;
-const logger = new Logger('Bootstrap');
+const tcpPort = parseInt(
+  process.env.TCP_PORT ?? String(NOTIFICATIONS_SERVICE_CONFIG.DEFAULT_TCP_PORT),
+  DEFAULT_RADIX,
+);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -22,18 +23,9 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL ?? NOTIFICATIONS_SERVICE_CONFIG.DEFAULT_FRONTEND_URL,
     credentials: true,
   });
-
-  const config = new DocumentBuilder()
-    .setTitle('Notifications Service')
-    .setDescription('Real-time notifications and WebSocket gateway')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
 
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
@@ -49,25 +41,19 @@ async function bootstrap() {
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.TCP,
     options: {
-      port: TCP_PORT,
+      port: tcpPort,
+      host: NOTIFICATIONS_SERVICE_CONFIG.DEFAULT_HOST,
     },
   });
 
   await app.startAllMicroservices();
   app.useGlobalFilters(new RpcHttpExceptionFilter());
 
-  const port = parseInt(process.env.PORT || String(DEFAULT_PORT), 10);
+  const port = parseInt(
+    process.env.PORT ?? String(NOTIFICATIONS_SERVICE_CONFIG.DEFAULT_PORT),
+    DEFAULT_RADIX,
+  );
   await app.listen(port);
-
-  logger.log(`HTTP server listening on port ${port}`);
-  logger.log(`TCP microservice listening on port ${TCP_PORT}`);
-  logger.log(
-    `Swagger documentation available at http://localhost:${port}/api/docs`,
-  );
-  logger.log(`RabbitMQ consumer connected to ${RABBITMQ_CONFIG.queue}`);
-  logger.log(
-    `WebSocket server ready on ws://localhost:${port}/notifications`,
-  );
 }
 
 bootstrap();

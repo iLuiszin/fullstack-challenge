@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { PinoLogger } from 'nestjs-pino';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -8,6 +9,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { NOTIFICATIONS_SERVICE_CONFIG, JWT_CONFIG } from '../constants/config.constants';
 
 interface AuthenticatedSocket extends Socket {
   data: {
@@ -17,10 +19,10 @@ interface AuthenticatedSocket extends Socket {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL ?? NOTIFICATIONS_SERVICE_CONFIG.DEFAULT_FRONTEND_URL,
     credentials: true,
   },
-  namespace: '/notifications',
+  namespace: NOTIFICATIONS_SERVICE_CONFIG.WEBSOCKET_NAMESPACE,
 })
 export class NotificationsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
@@ -28,19 +30,23 @@ export class NotificationsGateway
   @WebSocketServer()
   server: Server;
 
-  private readonly logger = new Logger(NotificationsGateway.name);
   private userSockets = new Map<string, Set<string>>();
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly logger: PinoLogger,
+    private readonly jwtService: JwtService,
+  ) {
+    this.logger.setContext(NotificationsGateway.name);
+  }
 
   afterInit(_server: Server): void {
-    this.logger.log('WebSocket Gateway initialized on /notifications');
+    this.logger.info('WebSocket Gateway initialized on /notifications');
   }
 
   async handleConnection(client: AuthenticatedSocket): Promise<void> {
     try {
       const token =
-        client.handshake.auth?.token ||
+        client.handshake.auth?.token ??
         client.handshake.headers?.authorization?.replace('Bearer ', '');
 
       if (!token) {
@@ -49,9 +55,7 @@ export class NotificationsGateway
       }
 
       const payload = await this.jwtService.verifyAsync(token, {
-        secret:
-          process.env.JWT_SECRET ||
-          'your-super-secret-jwt-key-change-this-in-production',
+        secret: process.env.JWT_SECRET ?? JWT_CONFIG.FALLBACK_SECRET,
       });
       const userId = payload.id;
 
@@ -87,7 +91,7 @@ export class NotificationsGateway
           this.userSockets.delete(userId);
         }
       }
-      this.logger.log(`User ${userId} disconnected (socket ${client.id})`);
+      this.logger.info(`User ${userId} disconnected (socket ${client.id})`);
     }
   }
   emitToUser(userId: string, event: string, data: unknown): void {
