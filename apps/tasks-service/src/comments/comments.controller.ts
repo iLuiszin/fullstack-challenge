@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { CreateCommentDto, PaginatedComments } from '@repo/types';
+import { PaginatedComments } from '@repo/types';
+import { CreateCommentDto } from '@repo/dto';
 import { CommentsService } from './comments.service';
 import { Comment } from '../entities/comment.entity';
 
@@ -19,11 +20,6 @@ export class CommentsController {
   async findByTaskId(
     @Payload() data: { taskId: string; page: number; size: number },
   ): Promise<PaginatedComments> {
-    return this.commentsService.findByTaskId(
-      data.taskId,
-      data.page,
-      data.size,
-    );
+    return this.commentsService.findByTaskId(data.taskId, data.page, data.size);
   }
 }
-

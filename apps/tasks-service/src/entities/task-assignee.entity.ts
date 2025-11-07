@@ -29,6 +29,9 @@ export class TaskAssignee {
   @Column('uuid', { name: 'assigned_by', nullable: true })
   assignedBy?: string;
 
+  @Column({ length: 100, nullable: true })
+  username?: string;
+
   @ManyToOne(() => Task, (task) => task.assignees, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'task_id' })
   task: Task;

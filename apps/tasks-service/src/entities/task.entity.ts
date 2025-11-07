@@ -45,6 +45,9 @@ export class Task {
   @Column('uuid')
   createdBy: string;
 
+  @Column({ length: 100, nullable: true })
+  creatorName?: string;
+
   @Column('uuid', { nullable: true })
   updatedBy?: string;
 

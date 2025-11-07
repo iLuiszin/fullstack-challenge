@@ -1,13 +1,19 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { ClientProxy } from '@nestjs/microservices';
+import { PinoLogger } from 'nestjs-pino';
 import { Comment } from '../entities/comment.entity';
 import { Task } from '../entities/task.entity';
-import { CreateCommentDto, PaginatedComments, ErrorCode } from '@repo/types';
+import { PaginatedComments, ErrorCode } from '@repo/types';
+import { CreateCommentDto } from '@repo/dto';
 import { EventPublisherService } from '../events/event-publisher.service';
 import { CommentCreatedEvent } from '@repo/messaging';
 import { throwRpcError } from '@repo/utils';
+import { TASKS_ERRORS } from '../tasks/constants/tasks.constants';
+import { PAGINATION_CONFIG, SORT_ORDER } from '../constants/config.constants';
 import { v4 as uuidv4 } from 'uuid';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class CommentsService {
@@ -18,13 +24,17 @@ export class CommentsService {
     private readonly taskRepository: Repository<Task>,
     private readonly eventPublisher: EventPublisherService,
     private readonly dataSource: DataSource,
-  ) {}
+    @Inject('AUTH') private readonly authClient: ClientProxy,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(CommentsService.name);
+  }
 
   async createComment(dto: CreateCommentDto): Promise<Comment> {
     if (!dto.taskId || !dto.authorId) {
       throwRpcError(
         HttpStatus.BAD_REQUEST,
-        'taskId and authorId are required',
+        TASKS_ERRORS.COMMENT_FIELDS_REQUIRED,
         ErrorCode.VALIDATION_FAILED,
       );
     }
@@ -40,7 +50,7 @@ export class CommentsService {
     if (!task) {
       throwRpcError(
         HttpStatus.NOT_FOUND,
-        'Task not found',
+        TASKS_ERRORS.TASK_NOT_FOUND,
         ErrorCode.RESOURCE_NOT_FOUND,
       );
     }
@@ -56,13 +66,27 @@ export class CommentsService {
 
       const savedComment = await manager.save(comment);
 
+      let authorName: string | undefined;
+      try {
+        const userResponse = await firstValueFrom(
+          this.authClient.send('user.list', { ids: [authorId] }),
+        );
+        authorName = userResponse?.users?.[0]?.username;
+      } catch (error) {
+        this.logger.error(
+          { error, authorId },
+          'Falha ao buscar nome do autor',
+        );
+      }
+
       const event: CommentCreatedEvent = {
         id: savedComment.id,
         taskId: savedComment.taskId,
         taskTitle: task.title,
         content: savedComment.content,
         authorId: savedComment.authorId,
-        taskAssigneeIds: task.assignees?.map((a) => a.userId) || [],
+        authorName,
+        taskAssigneeIds: task.assignees?.map((a) => a.userId) ?? [],
         correlationId,
         occurredAt: new Date().toISOString(),
         producer: 'tasks-service',
@@ -77,14 +101,14 @@ export class CommentsService {
 
   async findByTaskId(
     taskId: string,
-    page = 1,
-    size = 10,
+    page: number = PAGINATION_CONFIG.DEFAULT_PAGE,
+    size: number = PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
   ): Promise<PaginatedComments> {
     const skip = (page - 1) * size;
 
     const [comments, total] = await this.commentRepository.findAndCount({
       where: { taskId },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: SORT_ORDER.DESC },
       skip,
       take: size,
     });
@@ -98,4 +122,3 @@ export class CommentsService {
     };
   }
 }
-

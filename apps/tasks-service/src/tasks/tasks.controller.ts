@@ -1,13 +1,8 @@
-import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
-import {
-  CreateTaskDto,
-  UpdateTaskDto,
-  TaskFilters,
-  Task,
-  PaginatedTasks,
-} from '@repo/types';
-import { TasksService } from './tasks.service';
+import { Controller } from '@nestjs/common'
+import { MessagePattern, Payload } from '@nestjs/microservices'
+import { Task, PaginatedTasks } from '@repo/types'
+import { CreateTaskDto, UpdateTaskDto, TaskFilters } from '@repo/dto'
+import { TasksService } from './tasks.service'
 
 @Controller()
 export class TasksController {
@@ -36,7 +31,7 @@ export class TasksController {
   }
 
   @MessagePattern('tasks.delete')
-  async deleteTask(@Payload() data: { id: string }): Promise<void> {
+  async deleteTask(@Payload() data: { id: string }): Promise<{ success: boolean; id: string }> {
     return this.tasksService.remove(data.id);
   }
 
