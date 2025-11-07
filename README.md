@@ -547,31 +547,6 @@ sequenceDiagram
 
 Total: **13 dias** de desenvolvimento
 
-```mermaid
-gantt
-    title Timeline de Desenvolvimento (13 dias)
-    dateFormat  YYYY-MM-DD
-    section Infraestrutura
-    Setup Docker + Turborepo + Monorepo    :done, infra, 2025-01-01, 1d
-
-    section Auth Service
-    JWT + argon2 + Guards                   :done, auth, 2025-01-02, 5d
-    Aprendizado NestJS                      :done, learn, 2025-01-02, 5d
-
-    section Tasks Service
-    CRUD + Comments + Audit                 :done, tasks, 2025-01-07, 2d
-
-    section Notifications Service
-    WebSocket + RabbitMQ Consumer           :done, notif, 2025-01-09, 3d
-    Debugging WebSocket                     :done, debug, 2025-01-09, 3d
-
-    section Frontend
-    React + TanStack + shadcn/ui            :done, front, 2025-01-12, 2d
-
-    section Testes & Docs
-    Unit Tests + E2E + Health Checks        :done, tests, 2025-01-13, 1d
-```
-
 ### Fase 1: Infraestrutura (Dia 1)
 
 **Duração**: 1 dia
