@@ -163,10 +163,11 @@ export class TasksService {
         relations: ['assignees'],
       });
 
+      await this.auditService.logTaskCreated(savedTask.id, createdBy, manager);
+
       return { taskWithAssignees: taskWithAssignees!, savedTaskId: savedTask.id, event };
     });
 
-    await this.auditService.logTaskCreated(savedTaskId, createdBy);
     await this.eventPublisher.publishTaskCreated(event);
 
     return taskWithAssignees;
@@ -266,7 +267,17 @@ export class TasksService {
     const changes: Record<string, unknown> = {};
     const previousStatus = task.status;
 
-    return this.dataSource.transaction(async (manager) => {
+    let updaterName: string | undefined;
+    try {
+      const userResponse = await firstValueFrom(
+        this.authClient.send('user.list', { ids: [updatedBy] }),
+      );
+      updaterName = userResponse?.users?.[0]?.username;
+    } catch (error) {
+      this.logger.error({ error, updatedBy }, 'Falha ao buscar nome de quem atualizou');
+    }
+
+    const result = await this.dataSource.transaction(async (manager) => {
       if (updateTaskDto.title !== undefined) {
         task.title = updateTaskDto.title.trim();
         changes.title = task.title;
@@ -330,6 +341,7 @@ export class TasksService {
         updatedTask.id,
         changes,
         updatedBy,
+        manager,
       );
 
       if (updateTaskDto.status && updateTaskDto.status !== previousStatus) {
@@ -338,6 +350,7 @@ export class TasksService {
           previousStatus,
           updateTaskDto.status,
           updatedBy,
+          manager,
         );
       }
 
@@ -354,35 +367,27 @@ export class TasksService {
         );
       }
 
-      let updaterName: string | undefined
-      try {
-        const userResponse = await firstValueFrom(
-          this.authClient.send('user.list', { ids: [updatedBy] }),
-        )
-        updaterName = userResponse?.users?.[0]?.username
-      } catch (error) {
-        this.logger.error({ error, updatedBy }, 'Falha ao buscar nome de quem atualizou')
-      }
-
-      const event: TaskUpdatedEvent = {
-        id: taskWithAssignees.id,
-        title: taskWithAssignees.title,
-        assignedUserIds: taskWithAssignees.assignees.map((a) => a.userId),
-        changes,
-        updatedBy,
-        updaterName,
-        previousStatus,
-        newStatus: taskWithAssignees.status,
-        correlationId,
-        occurredAt: new Date().toISOString(),
-        producer: 'tasks-service',
-        schemaVersion: '1.0',
-      };
-
-      await this.eventPublisher.publishTaskUpdated(event);
-
       return taskWithAssignees;
     });
+
+    const event: TaskUpdatedEvent = {
+      id: result.id,
+      title: result.title,
+      assignedUserIds: result.assignees.map((a) => a.userId),
+      changes,
+      updatedBy,
+      updaterName,
+      previousStatus,
+      newStatus: result.status,
+      correlationId,
+      occurredAt: new Date().toISOString(),
+      producer: 'tasks-service',
+      schemaVersion: '1.0',
+    };
+
+    await this.eventPublisher.publishTaskUpdated(event);
+
+    return result;
   }
 
   async remove(id: string): Promise<{ success: boolean; id: string }> {

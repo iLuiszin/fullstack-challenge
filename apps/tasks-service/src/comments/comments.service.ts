@@ -57,46 +57,46 @@ export class CommentsService {
 
     const correlationId = dto.correlationId || uuidv4();
 
-    return this.dataSource.transaction(async (manager) => {
+    let authorName: string | undefined;
+    try {
+      const userResponse = await firstValueFrom(
+        this.authClient.send('user.list', { ids: [authorId] }),
+      );
+      authorName = userResponse?.users?.[0]?.username;
+    } catch (error) {
+      this.logger.error(
+        { error, authorId },
+        'Falha ao buscar nome do autor',
+      );
+    }
+
+    const savedComment = await this.dataSource.transaction(async (manager) => {
       const comment = manager.create(Comment, {
         content: dto.content.trim(),
         taskId,
         authorId,
       });
 
-      const savedComment = await manager.save(comment);
-
-      let authorName: string | undefined;
-      try {
-        const userResponse = await firstValueFrom(
-          this.authClient.send('user.list', { ids: [authorId] }),
-        );
-        authorName = userResponse?.users?.[0]?.username;
-      } catch (error) {
-        this.logger.error(
-          { error, authorId },
-          'Falha ao buscar nome do autor',
-        );
-      }
-
-      const event: CommentCreatedEvent = {
-        id: savedComment.id,
-        taskId: savedComment.taskId,
-        taskTitle: task.title,
-        content: savedComment.content,
-        authorId: savedComment.authorId,
-        authorName,
-        taskAssigneeIds: task.assignees?.map((a) => a.userId) ?? [],
-        correlationId,
-        occurredAt: new Date().toISOString(),
-        producer: 'tasks-service',
-        schemaVersion: '1.0',
-      };
-
-      await this.eventPublisher.publishCommentCreated(event);
-
-      return savedComment;
+      return manager.save(comment);
     });
+
+    const event: CommentCreatedEvent = {
+      id: savedComment.id,
+      taskId: savedComment.taskId,
+      taskTitle: task.title,
+      content: savedComment.content,
+      authorId: savedComment.authorId,
+      authorName,
+      taskAssigneeIds: task.assignees?.map((a) => a.userId) ?? [],
+      correlationId,
+      occurredAt: new Date().toISOString(),
+      producer: 'tasks-service',
+      schemaVersion: '1.0',
+    };
+
+    await this.eventPublisher.publishCommentCreated(event);
+
+    return savedComment;
   }
 
   async findByTaskId(

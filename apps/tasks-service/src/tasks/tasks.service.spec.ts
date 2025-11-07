@@ -308,6 +308,7 @@ describe('TasksService', () => {
         Status.IN_PROGRESS,
         Status.DONE,
         'user-123',
+        expect.any(Object),
       );
     });
   });
