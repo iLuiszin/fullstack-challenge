@@ -1,10 +1,15 @@
+import {
+  DEFAULT_RADIX,
+  RABBITMQ_CONFIG as RABBITMQ_DEFAULTS,
+} from '../constants/config.constants';
+
 export const RABBITMQ_CONFIG = {
-  urls: [process.env.RABBITMQ_URI || 'amqp://admin:admin@localhost:5672'],
-  exchange: 'tasks.exchange',
+  urls: [process.env.RABBITMQ_URI ?? RABBITMQ_DEFAULTS.DEFAULT_URI],
+  exchange: RABBITMQ_DEFAULTS.EXCHANGE,
   exchangeType: 'topic' as const,
-  queue: 'tasks_queue',
+  queue: RABBITMQ_DEFAULTS.QUEUE,
   queueOptions: { durable: true },
-  prefetchCount: 1,
+  prefetchCount: RABBITMQ_DEFAULTS.PREFETCH_COUNT,
   isGlobalPrefetchCount: true,
   connectionInitOptions: { wait: false },
 };
@@ -20,11 +25,17 @@ export const QUEUES = {
 } as const;
 
 export const RETRY_CONFIG = {
-  MAX_RETRIES: 3,
-  BACKOFF_MS: 1000,
+  MAX_RETRIES: RABBITMQ_DEFAULTS.RETRY_ATTEMPTS,
+  BACKOFF_MS: RABBITMQ_DEFAULTS.RETRY_DELAY_MS,
 } as const;
 
 export const OUTBOX_CONFIG = {
-  POLL_INTERVAL_MS: parseInt(process.env.OUTBOX_POLL_INTERVAL_MS || '5000', 10),
-  BATCH_SIZE: parseInt(process.env.OUTBOX_BATCH_SIZE || '50', 10),
+  POLL_INTERVAL_MS: parseInt(
+    process.env.OUTBOX_POLL_INTERVAL_MS ?? String(RABBITMQ_DEFAULTS.OUTBOX_POLL_INTERVAL_MS),
+    DEFAULT_RADIX,
+  ),
+  BATCH_SIZE: parseInt(
+    process.env.OUTBOX_BATCH_SIZE ?? String(RABBITMQ_DEFAULTS.OUTBOX_BATCH_SIZE),
+    DEFAULT_RADIX,
+  ),
 } as const;
