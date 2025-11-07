@@ -1,14 +1,13 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common'
+import { JwtService } from '@nestjs/jwt'
 import {
-  LoginDto,
   JwtPayload,
   AuthResponse,
-  RegisterDto,
   UserResponse,
   ErrorCode,
-} from '@repo/types';
-import { throwRpcError } from '@repo/utils';
+} from '@repo/types'
+import { LoginDto, RegisterDto } from '@repo/dto'
+import { throwRpcError } from '@repo/utils'
 import { UserService } from '../user/user.service';
 import { hash, verify } from 'argon2';
 import { AUTH_ERRORS } from './constants/auth.constants';
@@ -23,13 +22,24 @@ export class AuthService {
   ) {}
 
   async register(credentials: RegisterDto): Promise<AuthResponse> {
-    const userExists = await this.userService.findByEmail(credentials.email);
+    const [emailExists, usernameExists] = await Promise.all([
+      this.userService.findByEmail(credentials.email),
+      this.userService.findByUsername(credentials.username),
+    ]);
 
-    if (userExists) {
+    if (emailExists) {
       throwRpcError(
         HttpStatus.CONFLICT,
-        AUTH_ERRORS.USER_ALREADY_EXISTS,
-        ErrorCode.USER_ALREADY_EXISTS,
+        AUTH_ERRORS.EMAIL_ALREADY_EXISTS,
+        ErrorCode.EMAIL_ALREADY_EXISTS,
+      );
+    }
+
+    if (usernameExists) {
+      throwRpcError(
+        HttpStatus.CONFLICT,
+        AUTH_ERRORS.USERNAME_ALREADY_EXISTS,
+        ErrorCode.USERNAME_ALREADY_EXISTS,
       );
     }
 

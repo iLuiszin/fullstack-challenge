@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UserModule } from '../user/user.module';
+import { DEFAULT_RADIX, JWT_CONFIG } from '../constants/config.constants';
 
 @Module({
   imports: [
@@ -12,9 +13,11 @@ import { UserModule } from '../user/user.module';
       useFactory: (configService: ConfigService) => {
         const jwtExpiry = configService.get<string>('JWT_EXPIRY');
         return {
-          secret: configService.get<string>('JWT_SECRET') || 'jwt-secret',
+          secret: configService.get<string>('JWT_SECRET') ?? JWT_CONFIG.FALLBACK_SECRET,
           signOptions: {
-            expiresIn: jwtExpiry ? parseInt(jwtExpiry, 10) : 1800,
+            expiresIn: jwtExpiry
+              ? parseInt(jwtExpiry, DEFAULT_RADIX)
+              : JWT_CONFIG.DEFAULT_ACCESS_TOKEN_EXPIRY_SECONDS,
           },
         };
       },
@@ -29,9 +32,11 @@ import { UserModule } from '../user/user.module';
       useFactory: (configService: ConfigService) => {
         const refreshExpiry = configService.get<string>('JWT_REFRESH_EXPIRY');
         return new JwtService({
-          secret: configService.get<string>('JWT_REFRESH_SECRET') || 'refresh-secret',
+          secret: configService.get<string>('JWT_REFRESH_SECRET') ?? JWT_CONFIG.FALLBACK_REFRESH_SECRET,
           signOptions: {
-            expiresIn: refreshExpiry ? parseInt(refreshExpiry, 10) : 604800,
+            expiresIn: refreshExpiry
+              ? parseInt(refreshExpiry, DEFAULT_RADIX)
+              : JWT_CONFIG.DEFAULT_REFRESH_TOKEN_EXPIRY_SECONDS,
           },
         });
       },

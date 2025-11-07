@@ -1,11 +1,15 @@
-import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
-import { LoginDto, RegisterDto } from '@repo/types';
-import { AuthService } from './auth.service';
+import { Controller } from '@nestjs/common'
+import { MessagePattern, Payload } from '@nestjs/microservices'
+import { LoginDto, RegisterDto, ListUsersDto } from '@repo/dto'
+import { AuthService } from './auth.service'
+import { UserService } from '../user/user.service'
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly userService: UserService,
+  ) {}
 
   @MessagePattern('auth-register')
   async register(@Payload() credentials: RegisterDto) {
@@ -25,5 +29,10 @@ export class AuthController {
   @MessagePattern('auth-sign-out')
   async signOut(@Payload() userId: string) {
     return this.authService.signOut(userId);
+  }
+
+  @MessagePattern('user.list')
+  async listUsers(@Payload() params: ListUsersDto) {
+    return this.userService.findAll(params)
   }
 }
