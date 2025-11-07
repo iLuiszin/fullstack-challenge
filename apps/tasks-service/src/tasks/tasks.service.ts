@@ -341,7 +341,18 @@ export class TasksService {
         );
       }
 
-      const taskWithAssignees = await this.findOne(updatedTask.id);
+      const taskWithAssignees = await manager.findOne(TaskEntity, {
+        where: { id: updatedTask.id },
+        relations: ['assignees'],
+      });
+
+      if (!taskWithAssignees) {
+        throwRpcError(
+          HttpStatus.NOT_FOUND,
+          TASKS_ERRORS.TASK_NOT_FOUND,
+          ErrorCode.RESOURCE_NOT_FOUND,
+        );
+      }
 
       let updaterName: string | undefined
       try {
