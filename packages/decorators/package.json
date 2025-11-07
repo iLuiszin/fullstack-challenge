@@ -1,0 +1,21 @@
+{
+  "name": "@repo/decorators",
+  "version": "1.0.0",
+  "description": "Shared decorators for NestJS microservices",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["nestjs", "decorators", "microservices"],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@nestjs/common": "^11.1.8",
+    "@repo/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

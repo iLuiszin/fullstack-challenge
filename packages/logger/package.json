@@ -1,0 +1,21 @@
+{
+  "name": "@repo/logger",
+  "version": "0.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "nestjs-pino": "*",
+    "pino": "*",
+    "pino-http": "*"
+  }
+}

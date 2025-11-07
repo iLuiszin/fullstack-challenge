@@ -1,0 +1,243 @@
+services:
+  # Frontend React Application
+  web:
+    container_name: web
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+      target: development
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3001
+      - VITE_WS_URL=http://localhost:3004
+    networks:
+      - challenge-network
+    command: npm run dev -- --host 0.0.0.0
+
+  # API Gateway
+  api-gateway:
+    container_name: api-gateway
+    build:
+      context: .
+      dockerfile: ./apps/api-gateway/Dockerfile
+      target: development
+    ports:
+      - '3001:3001'
+    volumes:
+      - .:/app
+      - ./packages:/app/packages
+      - /app/node_modules
+      - /app/apps/api-gateway/node_modules
+      - /app/packages/types/node_modules
+      - /app/packages/dto/node_modules
+      - /app/packages/logger/node_modules
+      - /app/packages/messaging/node_modules
+      - /app/packages/decorators/node_modules
+      - /app/packages/utils/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - AUTH_SERVICE_HOST=auth-service
+      - AUTH_SERVICE_PORT=3002
+      - TASKS_SERVICE_HOST=tasks-service
+      - TASKS_SERVICE_PORT=3003
+      - NOTIFICATIONS_SERVICE_HOST=notifications-service
+      - NOTIFICATIONS_SERVICE_PORT=3005
+    command: sh -lc "pnpm install --frozen-lockfile && pnpm start:dev"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      tasks-service:
+        condition: service_healthy
+      notifications-service:
+        condition: service_healthy
+    networks:
+      - challenge-network
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3001/api/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # Auth Service
+  auth-service:
+    container_name: auth-service
+    build:
+      context: .
+      dockerfile: ./apps/auth-service/Dockerfile
+      target: development
+    ports:
+      - '3002:3002'
+    volumes:
+      - .:/app
+      - ./packages:/app/packages
+      - /app/node_modules
+      - /app/apps/auth-service/node_modules
+      - /app/packages/types/node_modules
+      - /app/packages/dto/node_modules
+      - /app/packages/logger/node_modules
+      - /app/packages/messaging/node_modules
+      - /app/packages/decorators/node_modules
+      - /app/packages/utils/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - DB_LINK=postgres://postgres:password@db:5432/challenge_db
+      - DB_USE_SSL=false
+    command: sh -lc "pnpm install --frozen-lockfile && pnpm --filter @repo/types build && pnpm migration:run && pnpm start:dev"
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - challenge-network
+    healthcheck:
+      test: ['CMD-SHELL', 'nc -z localhost 3002 || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # Tasks Service
+  tasks-service:
+    container_name: tasks-service
+    build:
+      context: .
+      dockerfile: ./apps/tasks-service/Dockerfile
+      target: development
+    ports:
+      - '3003:3003'
+    volumes:
+      - .:/app
+      - ./packages:/app/packages
+      - /app/node_modules
+      - /app/apps/tasks-service/node_modules
+      - /app/packages/types/node_modules
+      - /app/packages/dto/node_modules
+      - /app/packages/logger/node_modules
+      - /app/packages/messaging/node_modules
+      - /app/packages/decorators/node_modules
+      - /app/packages/utils/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - DB_LINK=postgres://postgres:password@db:5432/challenge_db
+      - RABBITMQ_URI=amqp://admin:admin@rabbitmq:5672
+      - DB_USE_SSL=false
+      - AUTH_SERVICE_HOST=auth-service
+      - AUTH_SERVICE_PORT=3002
+    command: sh -lc "pnpm install --frozen-lockfile && pnpm --filter @repo/types build && pnpm migration:run && pnpm start:dev"
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - challenge-network
+    healthcheck:
+      test: ['CMD-SHELL', 'nc -z localhost 3003 || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # Notifications Service
+  notifications-service:
+    container_name: notifications-service
+    build:
+      context: .
+      dockerfile: ./apps/notifications-service/Dockerfile
+      target: development
+    ports:
+      - '3004:3004'
+      - '3005:3005'
+    volumes:
+      - .:/app
+      - ./packages:/app/packages
+      - /app/node_modules
+      - /app/apps/notifications-service/node_modules
+      - /app/packages/types/node_modules
+      - /app/packages/dto/node_modules
+      - /app/packages/logger/node_modules
+      - /app/packages/messaging/node_modules
+      - /app/packages/decorators/node_modules
+      - /app/packages/utils/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3004
+      - DB_LINK=postgres://postgres:password@db:5432/challenge_db
+      - RABBITMQ_URI=amqp://admin:admin@rabbitmq:5672
+      - DB_USE_SSL=false
+    command: sh -lc "pnpm install --frozen-lockfile && pnpm --filter @repo/types build && pnpm migration:run && pnpm start:dev"
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - challenge-network
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3004/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # Postgres Database
+  db:
+    image: postgres:17.5-alpine3.21
+    container_name: db
+    attach: false
+    ports:
+      - '5432:5432'
+    networks:
+      - challenge-network
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: challenge_db
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    attach: false
+    restart: always
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    networks:
+      - challenge-network
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    volumes: ['rabbitmq_data:/var/lib/rabbitmq']
+    healthcheck:
+      test: ['CMD-SHELL', 'rabbitmq-diagnostics -q ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+
+networks:
+  challenge-network:
+    driver: bridge
