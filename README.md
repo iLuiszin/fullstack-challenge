@@ -2340,46 +2340,7 @@ graph LR
 
 ### Limitações Atuais
 
-#### 1. Migrations não geradas
-
-**Descrição**: Pastas de migrations existem mas estão vazias. Schema foi criado com `synchronize: true`.
-
-**Impacto**: Baixo para desenvolvimento, alto para produção.
-
-**Solução**:
-
-```bash
-# Gerar migrations
-cd apps/auth-service
-pnpm migration:generate InitialSchema
-
-cd apps/tasks-service
-pnpm migration:generate InitialSchema
-
-cd apps/notifications-service
-pnpm migration:generate InitialSchema
-```
-
-**Produção**: Usar `synchronize: false` e rodar migrations antes do deploy.
-
-#### 2. WebSocket Reconnection
-
-**Descrição**: Cliente não tenta reconectar automaticamente após perda de conexão.
-
-**Impacto**: Médio - usuário precisa recarregar página se conexão cair.
-
-**Solução futura**:
-
-```typescript
-const socket = io(url, {
-  auth: { token },
-  reconnection: true,
-  reconnectionDelay: 1000,
-  reconnectionAttempts: 5
-});
-```
-
-#### 3. Cache Layer
+#### 1. Cache Layer
 
 **Descrição**: Sem Redis para caching de queries frequentes.
 
@@ -2391,7 +2352,7 @@ const socket = io(url, {
 - Tarefas recentes
 - Notificações não lidas (count)
 
-#### 4. Paginação Cursor-based
+#### 2. Paginação Cursor-based
 
 **Descrição**: Paginação usa offset-based (page/size) em vez de cursor-based.
 
@@ -2401,7 +2362,7 @@ const socket = io(url, {
 
 **Solução futura**: Implementar cursor-based pagination para listas grandes.
 
-#### 5. Autenticação Avançada
+#### 3. Autenticação Avançada
 
 **Descrição**: Funcionalidades de auth não implementadas:
 
@@ -2414,7 +2375,7 @@ const socket = io(url, {
 
 **Solução futura**: Implementar conforme necessidade.
 
-#### 6. Testes de Integração
+#### 4. Testes de Integração
 
 **Descrição**: Testes cobrem units e E2E de auth, mas faltam testes de integração completos (ex: criar tarefa → receber notificação).
 
@@ -2422,7 +2383,7 @@ const socket = io(url, {
 
 **Solução futura**: Adicionar testes E2E completos com múltiplos serviços.
 
-#### 7. Performance
+#### 5. Performance
 
 **Descrição**: Queries N+1 em alguns endpoints (ex: listar tarefas com assignees).
 
@@ -2440,84 +2401,26 @@ const tasks = await taskRepository.find({
 
 Ou adicionar DataLoader para batch loading.
 
-#### 8. File Uploads
-
-**Descrição**: Sem suporte a anexos em tarefas/comentários.
-
-**Impacto**: Baixo - não era requisito.
-
-**Solução futura**: Adicionar upload de arquivos com:
-
-- Multer para upload
-- S3/MinIO para storage
-- Validação de tipo e tamanho
-
 ### Melhorias Futuras
 
 #### High Priority
 
-1. ✅ **Gerar migrations** - 15 minutos
-2. ✅ **WebSocket reconnection** - 30 minutos
-3. ✅ **Testes E2E completos** - 2-3 horas
+1. ✅ **Testes E2E completos**
 
 #### Medium Priority
 
-4. ✅ **Redis cache** - 2-3 horas
-5. ✅ **Cursor-based pagination** - 1-2 horas
-6. ✅ **Performance optimization** (N+1) - 1 hora
-7. ✅ **Email verification** - 2-3 horas
+1. ✅ **Redis cache**
+2. ✅ **Cursor-based pagination**
+3. ✅ **Performance optimization** (N+1)
+4. ✅ **Email verification**
 
 #### Low Priority
 
-8. ✅ **2FA** - 3-4 horas
-9. ✅ **Social login** - 3-4 horas
-10. ✅ **File uploads** - 2-3 horas
-11. ✅ **Full-text search** (PostgreSQL FTS ou Elasticsearch) - 4-6 horas
-12. ✅ **Dashboard com analytics** - 1 semana
-13. ✅ **i18n** (PT/EN) - 2-3 horas
-14. ✅ **Email notifications** (além de WebSocket) - 2-3 horas
-15. ✅ **Tags system** - 2-3 horas
-16. ✅ **Teams/Organizations** - 1 semana
-
-### Considerações de Produção
-
-Para deploy em produção, considere:
-
-1. **Environment Variables**: Usar secrets manager (AWS Secrets, Vault)
-2. **Database**: PostgreSQL gerenciado (AWS RDS, Google Cloud SQL)
-3. **Message Broker**: RabbitMQ gerenciado (CloudAMQP) ou Amazon MQ
-4. **Logging**: Centralizar em ELK Stack, Datadog ou CloudWatch
-5. **Monitoring**: Prometheus + Grafana ou New Relic
-6. **Error Tracking**: Sentry
-7. **CDN**: CloudFront ou Cloudflare para frontend
-8. **SSL/TLS**: Certificados automáticos (Let's Encrypt)
-9. **Backup**: Database backups automatizados
-10. **CI/CD**: GitHub Actions, GitLab CI ou Jenkins
-11. **Load Balancer**: Nginx ou AWS ALB
-12. **Scaling**: Kubernetes ou AWS ECS
-
----
-
-## 📄 Licença
-
-MIT License - veja [LICENSE](LICENSE) para detalhes.
-
----
-
-## 👨‍💻 Autor
-
-Desenvolvido como parte do desafio Full-stack - Jungle Gaming
-
-Sistema completo de gestão de tarefas colaborativo com:
-
-- ✅ Arquitetura de microserviços
-- ✅ Notificações em tempo real
-- ✅ Type-safety end-to-end
-- ✅ 60+ testes
-- ✅ Logging estruturado
-- ✅ Health checks
-- ✅ Documentação completa
-
----
-
-**Questions?** Open an [issue](https://github.com/user/repo/issues)!
+1. ✅ **2FA**
+2. ✅ **Social login**
+3. ✅ **Full-text search** (PostgreSQL FTS ou Elasticsearch)
+4. ✅ **Dashboard com analytics**
+5. ✅ **i18n** (PT/EN)
+6. ✅ **Email notifications** (além de WebSocket)
+7. ✅ **Tags system**
+8. ✅ **Teams/Organizations**
