@@ -2,6 +2,8 @@
 
 @import 'tw-animate-css';
 
+@import 'react-day-picker/style.css';
+
 @custom-variant dark (&:is(.dark *));
 
 body {
@@ -197,5 +199,10 @@ code {
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  [data-sonner-toast] [data-description] {
+    color: var(--popover-foreground) !important;
+    opacity: 1 !important;
   }
 }
