@@ -1,5 +1,6 @@
-import { Injectable, Inject, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Inject, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { PinoLogger } from 'nestjs-pino';
 import {
   TaskCreatedEvent,
   TaskUpdatedEvent,
@@ -10,25 +11,26 @@ import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class EventPublisherService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(EventPublisherService.name);
-
   constructor(
     @Inject('RABBITMQ_CLIENT')
     private readonly rabbitClient: ClientProxy,
-  ) {}
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(EventPublisherService.name);
+  }
 
   async onModuleInit() {
     try {
       await this.rabbitClient.connect();
-      this.logger.log('RabbitMQ client connected successfully');
+      this.logger.info('RabbitMQ client connected successfully');
     } catch (error) {
-      this.logger.error('Failed to connect to RabbitMQ', error);
+      this.logger.error({ error }, 'Failed to connect to RabbitMQ');
     }
   }
 
   async onModuleDestroy() {
     await this.rabbitClient.close();
-    this.logger.log('RabbitMQ client disconnected');
+    this.logger.info('RabbitMQ client disconnected');
   }
 
   async publishTaskCreated(event: TaskCreatedEvent): Promise<void> {
@@ -38,8 +40,8 @@ export class EventPublisherService implements OnModuleInit, OnModuleDestroy {
       );
     } catch (error) {
       this.logger.error(
-        `Failed to publish task.created event for task ${event.id}`,
-        error,
+        { error, taskId: event.id },
+        'Failed to publish task.created event',
       );
       throw error;
     }
@@ -52,8 +54,8 @@ export class EventPublisherService implements OnModuleInit, OnModuleDestroy {
       );
     } catch (error) {
       this.logger.error(
-        `Failed to publish task.updated event for task ${event.id}`,
-        error,
+        { error, taskId: event.id },
+        'Failed to publish task.updated event',
       );
       throw error;
     }
@@ -69,8 +71,8 @@ export class EventPublisherService implements OnModuleInit, OnModuleDestroy {
       );
     } catch (error) {
       this.logger.error(
-        `Failed to publish comment.created event for comment ${event.id}`,
-        error,
+        { error, commentId: event.id },
+        'Failed to publish comment.created event',
       );
       throw error;
     }

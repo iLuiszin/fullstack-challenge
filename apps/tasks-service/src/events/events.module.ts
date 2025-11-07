@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { LoggerModule } from '@repo/logger';
 import { EventPublisherService } from './event-publisher.service';
 import { RABBITMQ_CONFIG } from '../config/rabbitmq.config';
 
 @Module({
   imports: [
+    LoggerModule,
     ClientsModule.register([
       {
         name: 'RABBITMQ_CLIENT',
