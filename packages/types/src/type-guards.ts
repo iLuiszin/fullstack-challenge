@@ -1,4 +1,4 @@
-import { ErrorCode } from './errors';
+import { ErrorCode } from './error-codes.js';
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;

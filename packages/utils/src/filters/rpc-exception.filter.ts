@@ -1,11 +1,19 @@
-import { ArgumentsHost, Catch, HttpException } from '@nestjs/common';
+import { Catch, HttpException } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { Observable, throwError } from 'rxjs';
 import type { MicroserviceError } from '@repo/types';
 import { extractCode, extractErrorDetail, extractMessage } from '../error-extractors';
 
+@Catch(RpcException)
+export class RpcExceptionFilter {
+  catch(exception: RpcException): Observable<never> {
+    return throwError(() => exception.getError());
+  }
+}
+
 @Catch(HttpException)
 export class RpcHttpExceptionFilter {
-  catch(exception: HttpException): never {
+  catch(exception: HttpException): Observable<never> {
     const statusCode = exception.getStatus();
     const response = exception.getResponse();
 
@@ -24,6 +32,6 @@ export class RpcHttpExceptionFilter {
       payload.error = errorDetail;
     }
 
-    throw new RpcException(payload);
+    return throwError(() => new RpcException(payload));
   }
 }

@@ -2,27 +2,8 @@ import {
   hasValidMessage,
   isRecord,
   isValidErrorCode,
-} from './type-guards';
-
-export enum ErrorCode {
-  INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
-  INVALID_REFRESH_TOKEN = 'INVALID_REFRESH_TOKEN',
-  USER_ALREADY_EXISTS = 'USER_ALREADY_EXISTS',
-  RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
-  NOTIFICATION_NOT_FOUND = 'NOTIFICATION_NOT_FOUND',
-  VALIDATION_FAILED = 'VALIDATION_FAILED',
-  UNAUTHORIZED = 'UNAUTHORIZED',
-  FORBIDDEN = 'FORBIDDEN',
-  INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
-  SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
-  GATEWAY_TIMEOUT = 'GATEWAY_TIMEOUT',
-}
-
-export enum NetworkErrorCode {
-  TIMEOUT = 'ETIMEDOUT',
-  CONNECTION_REFUSED = 'ECONNREFUSED',
-  CONNECTION_RESET = 'ECONNRESET',
-}
+} from './type-guards.js';
+import { ErrorCode, NetworkErrorCode } from './error-codes.js';
 
 export interface MicroserviceError {
   statusCode: number;

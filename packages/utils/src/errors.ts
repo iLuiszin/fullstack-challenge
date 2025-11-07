@@ -1,5 +1,5 @@
-import { RpcException } from '@nestjs/microservices';
-import { ErrorCode, MicroserviceError } from '@repo/types';
+import { HttpException } from '@nestjs/common';
+import { ErrorCode } from '@repo/types';
 
 export const throwRpcError = (
   statusCode: number,
@@ -7,8 +7,7 @@ export const throwRpcError = (
   code?: ErrorCode,
   error?: unknown,
 ): never => {
-  const payload: MicroserviceError = {
-    statusCode,
+  const payload: Record<string, unknown> = {
     message,
   };
 
@@ -20,5 +19,5 @@ export const throwRpcError = (
     payload.error = error;
   }
 
-  throw new RpcException(payload);
+  throw new HttpException(payload, statusCode);
 };

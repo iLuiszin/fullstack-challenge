@@ -1,6 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsObject, MinLength, IsUUID, IsBoolean, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
-import { Priority, Status } from './task';
+import { Priority, Status } from './task.js'
 
 export enum NotificationType {
   TASK_ASSIGNED = 'TASK_ASSIGNED',
@@ -102,40 +100,11 @@ export interface Notification {
   createdAt: Date;
 }
 
-export class CreateNotificationDto {
-  @IsString()
-  @IsUUID()
-  userId!: string;
-
-  @IsEnum(NotificationType)
-  type!: NotificationType;
-
-  @IsString()
-  @MinLength(1)
-  message!: string;
-
-  @IsOptional()
-  @IsObject()
-  metadata?: NotificationMetadata;
-}
-
-export class NotificationQueryDto {
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
-  page?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
-  size?: number;
-
-  @IsOptional()
-  @IsBoolean()
-  @Type(() => Boolean)
-  unreadOnly?: boolean;
+export interface CreateNotificationInput {
+  userId: string
+  type: NotificationType
+  message: string
+  metadata?: NotificationMetadata
 }
 
 export interface PaginatedNotifications {
