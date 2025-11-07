@@ -2,20 +2,32 @@
 
 FROM node:20-alpine AS base
 
-RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+RUN corepack enable && corepack prepare pnpm@8.15.6 --activate
+RUN apk add --no-cache curl
 
 WORKDIR /app
 
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-COPY packages/types/package.json ./packages/types/
-COPY packages/utils/package.json ./packages/utils/
-COPY packages/eslint-config/package.json ./packages/eslint-config/
-COPY packages/typescript-config/package.json ./packages/typescript-config/
-COPY apps/api-gateway/package.json ./apps/api-gateway/
+FROM base AS development
 
+# Copy workspace config
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json turbo.json ./
+
+# Copy all packages
+COPY packages ./packages
+
+# Copy api-gateway
+COPY apps/api-gateway ./apps/api-gateway
+
+# Install dependencies
 RUN pnpm install --frozen-lockfile
 
-FROM base AS development
+# Build shared packages
+RUN pnpm --filter @repo/types build
+RUN pnpm --filter @repo/dto build
+RUN pnpm --filter @repo/logger build
+RUN pnpm --filter @repo/messaging build
+RUN pnpm --filter @repo/decorators build
+RUN pnpm --filter @repo/utils build
 
 WORKDIR /app/apps/api-gateway
 

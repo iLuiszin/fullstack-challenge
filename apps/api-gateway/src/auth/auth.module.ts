@@ -8,14 +8,16 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { RefreshTokenAuthGuard } from './guards/refresh-token-auth.guard';
+import { DEFAULT_RADIX, MICROSERVICE_HOSTS, MICROSERVICE_PORTS, MICROSERVICE_CONFIG } from '../constants/config.constants';
 
 const authClientModule = ClientsModule.register([
   {
     name: 'AUTH',
     transport: Transport.TCP,
     options: {
-      port: 3002,
-      timeout: 5000,
+      host: MICROSERVICE_HOSTS.AUTH,
+      port: parseInt(process.env.AUTH_SERVICE_PORT || String(MICROSERVICE_PORTS.AUTH), DEFAULT_RADIX),
+      timeout: MICROSERVICE_CONFIG.TIMEOUT_MS,
     },
   },
 ]);
@@ -26,11 +28,13 @@ const authClientModule = ClientsModule.register([
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret:
-          configService.get<string>('JWT_SECRET') ||
-          'your-super-secret-jwt-key-change-this-in-production',
-      }),
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error('JWT_SECRET must be configured');
+        }
+        return { secret };
+      },
     }),
   ],
   controllers: [AuthController],
@@ -40,6 +44,6 @@ const authClientModule = ClientsModule.register([
     JwtAuthGuard,
     RefreshTokenAuthGuard,
   ],
-  exports: [authClientModule, JwtAuthGuard, RefreshTokenAuthGuard],
+  exports: [authClientModule, JwtModule, JwtAuthGuard, RefreshTokenAuthGuard],
 })
 export class AuthModule {}

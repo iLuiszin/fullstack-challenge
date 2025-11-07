@@ -3,11 +3,18 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
+import { RpcErrorInterceptor } from './interceptors/rpc-error.interceptor';
+import { API_CONFIG } from './constants/config.constants';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix('api');
+  app.enableCors({
+    origin: process.env.FRONTEND_URL ?? API_CONFIG.DEFAULT_CORS_ORIGIN,
+    credentials: true,
+  });
+
+  app.setGlobalPrefix(API_CONFIG.PREFIX);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -17,6 +24,7 @@ async function bootstrap() {
     }),
   );
 
+  app.useGlobalInterceptors(new RpcErrorInterceptor());
   app.useGlobalFilters(new GlobalExceptionFilter());
 
   const config = new DocumentBuilder()
@@ -37,8 +45,8 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup(`${API_CONFIG.PREFIX}/docs`, app, document);
 
-  await app.listen(process.env.PORT ?? 3001);
+  await app.listen(process.env.PORT ?? API_CONFIG.DEFAULT_PORT);
 }
 bootstrap();

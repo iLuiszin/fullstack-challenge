@@ -1,27 +1,11 @@
-import {
-  Controller,
-  Get,
-  Inject,
-  Param,
-  ParseBoolPipe,
-  ParseIntPipe,
-  Patch,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Delete, Get, Inject, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ClientProxy } from '@nestjs/microservices';
-import { NotificationQueryOptions } from '@repo/types';
+import type { NotificationQueryOptions, JwtPayload } from '@repo/types';
+import { NotificationQueryDto } from '@repo/dto';
+import { CurrentUser } from '@repo/decorators';
 import { firstValueFrom } from 'rxjs';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    id: string;
-    email: string;
-  };
-}
 
 @ApiTags('Notifications')
 @Controller('notifications')
@@ -34,22 +18,16 @@ export class NotificationsController {
 
   @Get()
   @ApiOperation({ summary: 'Get notifications for the authenticated user' })
-  async getNotifications(
-    @Req() req: AuthenticatedRequest,
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('size', new ParseIntPipe({ optional: true })) size?: number,
-    @Query('unreadOnly', new ParseBoolPipe({ optional: true }))
-    unreadOnly?: boolean,
-  ) {
+  async getNotifications(@CurrentUser() user: JwtPayload, @Query() query: NotificationQueryDto) {
     const options: NotificationQueryOptions = {
-      page: page || 1,
-      size: size || 10,
-      unreadOnly: unreadOnly || false,
+      page: query.page ?? 1,
+      size: query.size ?? 10,
+      unreadOnly: query.unreadOnly ?? false,
     };
 
     return firstValueFrom(
       this.notificationsClient.send('notifications.findByUser', {
-        userId: req.user.id,
+        userId: user.id,
         options,
       }),
     );
@@ -58,23 +36,47 @@ export class NotificationsController {
   @Patch(':id/read')
   @ApiOperation({ summary: 'Mark a notification as read' })
   async markAsRead(
-    @Req() req: AuthenticatedRequest,
+    @CurrentUser() user: JwtPayload,
     @Param('id') notificationId: string,
   ) {
     return firstValueFrom(
       this.notificationsClient.send('notifications.markAsRead', {
         notificationId,
-        userId: req.user.id,
+        userId: user.id,
       }),
     );
   }
 
   @Patch('read-all')
   @ApiOperation({ summary: 'Mark all notifications as read' })
-  async markAllAsRead(@Req() req: AuthenticatedRequest) {
+  async markAllAsRead(@CurrentUser() user: JwtPayload) {
     return firstValueFrom(
       this.notificationsClient.send('notifications.markAllAsRead', {
-        userId: req.user.id,
+        userId: user.id,
+      }),
+    );
+  }
+
+  @Delete('all')
+  @ApiOperation({ summary: 'Delete all notifications' })
+  async deleteAllNotifications(@CurrentUser() user: JwtPayload) {
+    return firstValueFrom(
+      this.notificationsClient.send('notifications.deleteAll', {
+        userId: user.id,
+      }),
+    );
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a notification' })
+  async deleteNotification(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') notificationId: string,
+  ) {
+    return firstValueFrom(
+      this.notificationsClient.send('notifications.delete', {
+        notificationId,
+        userId: user.id,
       }),
     );
   }

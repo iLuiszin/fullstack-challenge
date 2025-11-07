@@ -10,19 +10,20 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ClientProxy } from '@nestjs/microservices'
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger'
 import {
   CreateTaskDto,
   UpdateTaskDto,
   CreateCommentDto,
   TaskFilters,
-} from '@repo/types';
-import { firstValueFrom } from 'rxjs';
-import { JwtAuthGuard } from '../auth';
-import { CurrentUser } from '@repo/decorators';
-import type { JwtPayload } from '@repo/types';
+} from '@repo/dto'
+import { firstValueFrom } from 'rxjs'
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { CurrentUser } from '@repo/decorators'
+import type { JwtPayload } from '@repo/types'
 import { v4 as uuidv4 } from 'uuid';
+import { PAGINATION_CONFIG } from '../constants/config.constants';
 
 @ApiTags('Tasks')
 @Controller('tasks')
@@ -119,8 +120,8 @@ export class TasksController {
     return firstValueFrom(
       this.tasksClient.send('tasks.comments.findByTaskId', {
         taskId,
-        page: page || 1,
-        size: size || 10,
+        page: page || PAGINATION_CONFIG.DEFAULT_PAGE,
+        size: size || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
       }),
     );
   }

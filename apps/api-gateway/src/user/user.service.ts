@@ -1,15 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common'
+import { ClientProxy } from '@nestjs/microservices'
+import { firstValueFrom } from 'rxjs'
 
 @Injectable()
 export class UserService {
-  private users = [
-    {
-      id: '123',
-      name: 'userTest',
-    },
-  ];
+  constructor(@Inject('AUTH') private readonly authClient: ClientProxy) {}
 
-  async getUserProfile(userId: string) {
-    return this.users.find((u) => u.id === userId) || null;
+  async listUsers(params: {
+    search?: string
+    page?: number
+    size?: number
+    ids?: string[]
+  }) {
+    return firstValueFrom(this.authClient.send('user.list', params))
   }
 }

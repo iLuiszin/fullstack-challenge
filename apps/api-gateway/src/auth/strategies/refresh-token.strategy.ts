@@ -10,12 +10,15 @@ export class RefreshTokenStrategy extends PassportStrategy(
   'refresh-jwt',
 ) {
   constructor(configService: ConfigService) {
+    const secret = configService.get<string>('JWT_REFRESH_SECRET');
+    if (!secret) {
+      throw new Error('JWT_REFRESH_SECRET must be configured');
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey:
-        configService.get<string>('JWT_REFRESH_SECRET') ||
-        'your-super-secret-refresh-key-change-this-in-production-different',
+      secretOrKey: secret,
     });
   }
 

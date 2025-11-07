@@ -113,23 +113,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   }
 
   private fromRpcPayload(exception: unknown): MicroserviceError | undefined {
+    if (isRecord(exception) && 'error' in exception) {
+      const nestedError = exception.error;
+      if (isMicroserviceError(nestedError)) {
+        return nestedError;
+      }
+      if (isLegacyMicroserviceError(nestedError)) {
+        return normalizeLegacyError(nestedError);
+      }
+    }
+
     if (isMicroserviceError(exception)) {
       return exception;
     }
 
     if (isLegacyMicroserviceError(exception)) {
       return normalizeLegacyError(exception);
-    }
-
-    if (typeof exception === 'string') {
-      const parsed = this.tryParseJson(exception);
-      if (isMicroserviceError(parsed)) {
-        return parsed;
-      }
-
-      if (isLegacyMicroserviceError(parsed)) {
-        return normalizeLegacyError(parsed);
-      }
     }
 
     return undefined;
@@ -143,7 +142,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     const errorConfig = this.networkErrorMap[code];
     return errorConfig
-      ? this.buildError(errorConfig.status, errorConfig.message, errorConfig.code)
+      ? this.buildError(
+          errorConfig.status,
+          errorConfig.message,
+          errorConfig.code,
+        )
       : this.buildError(
           HttpStatus.SERVICE_UNAVAILABLE,
           'Service unavailable',
@@ -190,14 +193,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     return undefined;
-  }
-
-  private tryParseJson(value: string): unknown {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return undefined;
-    }
   }
 
   private logError(
